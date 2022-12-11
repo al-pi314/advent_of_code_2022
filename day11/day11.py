@@ -7,10 +7,9 @@ def get_function(operator, right_operand):
         operation_base = lambda a, b: a * b
     
     if right_operand == "old":
-        operation = lambda old: operation_base(old, old)
-    else:
-        operation = lambda old: operation_base(old, int(right_operand))
-    return operation
+        return lambda old: operation_base(old, old)
+
+    return lambda old: operation_base(old, int(right_operand))
 
 def read_monkey_logic(f):
     f.readline() # discard
@@ -56,8 +55,9 @@ def get_monkey_bussiness(rounds, relief, use_global_divisor=False):
                 else:
                     monkey_items[monkey_if_false[i]].append(value)
             monkey_items[i] = []
-    largest2 = nlargest(2, inspections)
-    return largest2[0] * largest2[1] 
+    first, second = nlargest(2, inspections)
+    return first * second
 
-print("Part 1:", get_monkey_bussiness(20, 3, use_global_divisor=False))
+# Only one of the following two lines should be uncommented
+# print("Part 1:", get_monkey_bussiness(20, 3, use_global_divisor=False))
 print("Part 2:", get_monkey_bussiness(10000, 1, use_global_divisor=True))
