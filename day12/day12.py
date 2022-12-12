@@ -21,34 +21,41 @@ with open("input.txt") as f:
 def height_ok(y, x, dy, dx):
     return grid[y + dy][x + dx] - grid[y][x] <= 1
 
+def add_to_queue(q, y, x, dy, dx, steps):
+    ny = y + dy
+    nx = x + dx
+    if ny >= 0 and ny < len(grid) and nx >= 0 and nx < len(grid[0]) and height_ok(y, x, dy, dx):
+        q.append(((ny, nx), steps))
 
-def climb(start, start_steps):
+def climb(start, least_moves):
     front = deque()
     front.append((start, 0))
     visited = set()
     while len(front) > 0:
         (y, x), steps = front.popleft()
+        # prevernt cycles
         if (y, x) in visited:
             continue
-        if (y, x) in start_steps and start_steps[(y, x)] <= steps:
-            return float('inf')
         visited.add((y, x))
+        
+        # prevent worse path from current strat
+        if (y, x) in least_moves and least_moves[(y, x)] <= steps:
+            continue
+        least_moves[(y, x)] = steps
+        
         if (y, x) == finish:
             return steps
-        if y > 0 and height_ok(y, x, -1, 0):
-            front.append(((y - 1, x), steps + 1))
-        if y < len(grid) - 1 and height_ok(y, x, 1, 0):
-            front.append(((y + 1, x), steps + 1))
-        if x > 0 and height_ok(y, x, 0, -1):
-            front.append(((y, x - 1), steps + 1))
-        if x < len(grid[y]) - 1 and height_ok(y, x, 0, 1):
-            front.append(((y, x + 1), steps + 1))
+        
+        add_to_queue(front, y, x, -1, 0, steps + 1)
+        add_to_queue(front, y, x, 1, 0, steps + 1)
+        add_to_queue(front, y, x, 0, -1, steps +1)
+        add_to_queue(front, y, x, 0, 1, steps + 1)
     return float('inf')
 
-start_steps = {start: climb(start, {})}
-best_start_steps = start_steps[start]
+least_moves = {}
+best_start_steps = climb(start, least_moves)
 print("Part 1:", best_start_steps)
 for a_start in a_starts:
-    start_steps[a_start] = climb(a_start, start_steps)
-    best_start_steps = min(best_start_steps, start_steps[a_start])
+    start_steps = climb(a_start, least_moves)
+    best_start_steps = min(best_start_steps, start_steps)
 print("Part 2:", best_start_steps)
