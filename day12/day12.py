@@ -18,27 +18,24 @@ with open("input.txt") as f:
                 a_starts.append((len(grid) - 1, len(grid[-1])))
             grid[-1].append(ord(c) - ord('a'))
 
-def height_ok(y, x, dy, dx):
-    return grid[y + dy][x + dx] - grid[y][x] <= 1
+def can_climb(y, x, y2, x2):
+    return grid[y2][x2] - grid[y][x] <= 1
 
-def add_to_queue(q, y, x, dy, dx, steps):
-    ny = y + dy
-    nx = x + dx
-    if ny >= 0 and ny < len(grid) and nx >= 0 and nx < len(grid[0]) and height_ok(y, x, dy, dx):
-        q.append(((ny, nx), steps))
+def queue_adder(q, steps):
+    def add(y, x, dy, dx):
+        ny, nx = y + dy, x + dx
+        in_bounds = (ny >= 0 and ny < len(grid) and nx >= 0 and nx < len(grid[0]))
+        if in_bounds and can_climb(y, x, ny, nx):
+            q.append(((ny, nx), steps))
+    return add
 
 def climb(start, least_moves):
     front = deque()
     front.append((start, 0))
-    visited = set()
+
     while len(front) > 0:
         (y, x), steps = front.popleft()
-        # prevernt cycles
-        if (y, x) in visited:
-            continue
-        visited.add((y, x))
         
-        # prevent worse path from current strat
         if (y, x) in least_moves and least_moves[(y, x)] <= steps:
             continue
         least_moves[(y, x)] = steps
@@ -46,16 +43,20 @@ def climb(start, least_moves):
         if (y, x) == finish:
             return steps
         
-        add_to_queue(front, y, x, -1, 0, steps + 1)
-        add_to_queue(front, y, x, 1, 0, steps + 1)
-        add_to_queue(front, y, x, 0, -1, steps +1)
-        add_to_queue(front, y, x, 0, 1, steps + 1)
+        add_to_queue = queue_adder(front, steps + 1)
+        add_to_queue(y, x, -1, 0)
+        add_to_queue(y, x, 1, 0)
+        add_to_queue(y, x, 0, -1)
+        add_to_queue(y, x, 0, 1)
+        
     return float('inf')
 
+# Part 1
 least_moves = {}
 best_start_steps = climb(start, least_moves)
 print("Part 1:", best_start_steps)
+
+# Part 2
 for a_start in a_starts:
-    start_steps = climb(a_start, least_moves)
-    best_start_steps = min(best_start_steps, start_steps)
+    best_start_steps = min(best_start_steps, climb(a_start, least_moves))
 print("Part 2:", best_start_steps)
