@@ -1,11 +1,37 @@
 from functools import cmp_to_key
 
 
+def read_list(line, i):
+    if i >= len(line):
+        raise SyntaxError("no matching ]")
+    if line[i] == "]":
+        return [], i
+    result = []
+    element = 0
+    while True:
+        if line[i] == "[":
+            sub_list, i = read_list(line, i + 1)
+            element = sub_list
+        elif line[i] == "]":
+            result.append(element)
+            return result, i
+        elif line[i] == ",":
+            result.append(element)
+            element = 0
+        else:
+            element *= 10
+            element += int(line[i])
+        i += 1
+
+def read_list_from_line(line):
+    l, _ = read_list(line, 1)
+    return l
+    
 def packet_reader():
     with open('input.txt') as f:
         while True:
-            p1 = eval(f.readline())
-            p2 = eval(f.readline())
+            p1 = read_list_from_line(f.readline())
+            p2 = read_list_from_line(f.readline())
             yield p1, p2
             if f.readline() == "":
                 break
