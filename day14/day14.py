@@ -38,33 +38,66 @@ def rock_structures():
             grid, xoffset = add_rock(grid, line, xoffset)
     return grid, xoffset
 
-def drop_sand(rock_system, sand_source):
+def drop_sand(rock_system, sand_source, drops=0, overflowed=False):
     x, y = sand_source
-    if x < 0 or x >= rock_system.shape[1] or y >= rock_system.shape[0] -1:
-        return False
-    if not rock_system[y +1, x]:
-        return drop_sand(rock_system, (x, y + 1))
-    elif not rock_system[y +1, x -1]:
-        return drop_sand(rock_system, (x - 1, y +1))
-    elif not rock_system[y +1, x +1]:
-        return drop_sand(rock_system, (x + 1, y +1))
-    elif rock_system[y, x]:
-        return False
+    if x < 0 or x >= rock_system.shape[1] or y >= rock_system.shape[0]:
+        if not overflowed:
+            print("Part 1:", drops)
+        return 0, True
+    if rock_system[y, x]:
+        return 0, overflowed
+    down, overflowed = drop_sand(rock_system, (x, y + 1), drops, overflowed)
+    left, overflowed= drop_sand(rock_system, (x - 1, y +1), drops + down, overflowed)
+    right, overflowed= drop_sand(rock_system, (x + 1, y +1), drops + down + left, overflowed)
     rock_system[y, x] = True
-    return True
+    return down + left + right + 1, overflowed
 
+# read input
 rock_system, xoffset = rock_structures()
 
-# add_floor = False # Part 1
-# add_floor = True # Part 2
-add_floor = True
-if add_floor:
-    xoffset -= rock_system.shape[0]
-    rock_system = np.hstack((np.zeros((rock_system.shape[0], rock_system.shape[0]), dtype=bool), rock_system, np.zeros((rock_system.shape[0], rock_system.shape[0]), dtype=bool)))
-    rock_system = np.vstack((rock_system, np.zeros((1, rock_system.shape[1]), dtype=bool), np.ones((1, rock_system.shape[1]), dtype=bool)))
+# edge heights
+lh = np.argmax(rock_system[:, 0])
+rh = np.argmax(rock_system[:, -1])
 
-drops = 0
+# bottom gaps
+gaps = rock_system[-1, :] == False
+
+# drop sand
 sand_source = (500 - xoffset, 0)
-while drop_sand(rock_system, sand_source):
-    drops += 1
-print(f'Dropped {drops} - {"Part 1" if not add_floor else "Part 2"}')
+drops, _ = drop_sand(rock_system, sand_source)
+
+# new edge heights
+nlh = np.argmax(rock_system[:, 0])
+nrh = np.argmax(rock_system[:, -1])
+
+# additional drops in left overflow
+if nlh < lh:
+    # out of system drops (from left to left)
+    h = rock_system.shape[0] - nlh
+    drops += (h * (h + 1)) // 2
+
+    # in system drops (from left to right)
+    for y in range(nlh, rock_system.shape[0]):
+        d, _ = drop_sand(rock_system, (0, y), overflowed=True)
+        drops += d
+
+# additional drops in right overflow
+if nrh < rh:
+    # out of system drops (from right to right)
+    h = rock_system.shape[0] - nrh
+    drops += (h * (h + 1)) // 2
+
+    # in system drops (from right to left)
+    for y in range(nrh, rock_system.shape[0]):
+        d, _ = drop_sand(rock_system, (rock_system.shape[1] -1, y), overflowed=True)
+        drops += d
+
+# filled gaps
+filled_gaps = [True] + list(gaps & (rock_system[-1, :] == True)) + [True]
+neighbours = set()
+for i in range(1, len(filled_gaps) -1):
+    if not filled_gaps[i] and (filled_gaps[i -1] or filled_gaps[i +1]):
+        neighbours.add(i)
+drops += np.sum(filled_gaps) + len(neighbours) - 2
+
+print("Part 2:", drops)
