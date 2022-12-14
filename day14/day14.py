@@ -18,14 +18,11 @@ def add_line(grid, sx, sy, ex, ey, offset):
     grid[sy:ey, sx:ex] = True
     return grid, offset
 
-def start_end(s, e):
-    s, e = sorted((s, e))
-    return s, e +1
-
 def add_rock(grid, line, xoffset):
     corners = map(lambda x: tuple(map(int, x)), map(lambda x: x.split(","), line.strip("\n").split(" -> ")))
     previous = next(corners)
     offset = previous[0] if xoffset is None else xoffset
+    start_end = lambda s, e: (min(s, e), max(s, e) +1)
     for x, y in corners:
         sx, ex = start_end(int(previous[0]), int(x))
         sy, ey = start_end(int(previous[1]), int(y))
@@ -40,9 +37,6 @@ def rock_structures():
         for line in f:
             grid, xoffset = add_rock(grid, line, xoffset)
     return grid, xoffset
-
-rock_system, xoffset = rock_structures()
-sand_source = (500 - xoffset, 0)
 
 def drop_sand(rock_system, sand_source):
     x, y = sand_source
@@ -59,15 +53,18 @@ def drop_sand(rock_system, sand_source):
     rock_system[y, x] = True
     return True
 
+rock_system, xoffset = rock_structures()
+
 # add_floor = False # Part 1
 # add_floor = True # Part 2
-add_floor = False
+add_floor = True
 if add_floor:
-    sand_source = (sand_source[0] + rock_system.shape[0], sand_source[1])
+    xoffset -= rock_system.shape[0]
     rock_system = np.hstack((np.zeros((rock_system.shape[0], rock_system.shape[0]), dtype=bool), rock_system, np.zeros((rock_system.shape[0], rock_system.shape[0]), dtype=bool)))
     rock_system = np.vstack((rock_system, np.zeros((1, rock_system.shape[1]), dtype=bool), np.ones((1, rock_system.shape[1]), dtype=bool)))
 
 drops = 0
+sand_source = (500 - xoffset, 0)
 while drop_sand(rock_system, sand_source):
     drops += 1
 print(f'Dropped {drops} - {"Part 1" if not add_floor else "Part 2"}')
