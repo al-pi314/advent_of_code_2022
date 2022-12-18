@@ -10,30 +10,25 @@ def get_edges(cordinates):
             edges.append(tuple(edge_cordinates))
     return edges
 
-def has_water_access(block, blocks, limits, memory):
-    visited=set()
-    q = deque([block])
-    has_access = False
-    while q:
-        p = q.popleft()
-        if p in visited:
-            continue
-        visited.add(p)
+def has_water_access(block, blocks, limits, visited, with_access):
+    if block in visited:
+        return False
+    visited.add(block)
 
-        if p in blocks:
-            continue
-        
-        if p in memory and memory[p]:
+    if block in blocks:
+        return False
+    
+    if any([block[i] <= limits[i][0] or block[i] >= limits[i][1] for i in range(len(block))]):
+        return True
+
+    if block in with_access:
+        return True
+
+    for edge in get_edges(list(block)):
+        if has_water_access(edge, blocks, limits, visited, with_access):
+            with_access.add(block)
             return True
-        
-        if any([p[i] <= limits[i][0] or p[i] >= limits[i][1] for i in range(len(p))]):
-            has_access = True
-            break
-
-        q.extend(get_edges(list(p)))
-    for p in visited:
-        memory[p] = has_access
-    return has_access        
+    return False
 
 with open("input.txt") as file:
     blocks = set()
@@ -48,5 +43,5 @@ with open("input.txt") as file:
         
     print("Part 1:", sum([c for b, c in bordering_blocks.items() if b not in blocks]))
 
-    memory = {}
-    print("Part 2:", sum([c for b, c in bordering_blocks.items() if has_water_access(b, blocks, limits, memory)]))
+    with_access = set()
+    print("Part 2:", sum([c for b, c in bordering_blocks.items() if has_water_access(b, blocks, limits, set(), with_access)]))
