@@ -15,7 +15,7 @@ def distance(x1, y1, x2, y2):
 limit = 4000000
 interest_y = 2000000
 
-y_intervals = [Interval(0, 0) for _ in range(limit + 1)]
+y_intervals = [Interval(-1,-1) for _ in range(limit + 1)]
 full_coverage = set()
 for i, sensor_reading in enumerate(sensor_reading_generator()):
     to_beacon = distance(*sensor_reading)
