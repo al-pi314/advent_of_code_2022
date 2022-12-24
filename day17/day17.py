@@ -1,6 +1,13 @@
 import numpy as np
 
-# encoded by left offset, top offset right offset and bottom offset (looking from left top)
+# adjust for your input
+MEMORISE_LAST_N = 20 # if this is too low, false loop might be found
+TERRAIN_SPACE = 5000 # if this is too low, loop won't be found and error will be returned
+
+# simulate n rocks falling
+PART_1 = 2022
+PART_2 = 1000000000000
+
 rock_types = [
     np.array([
         [True, True, True, True]
@@ -54,30 +61,32 @@ def set_rock(terrain, rock, position):
     terrain[y:y+h, x:x+w] |= rock
     return y + h - 1
 
-def hash(terrain, max_y, n_top_rows, rock_type):
-    terrain_hash = 0
-    bottom = max(0, max_y - n_top_rows)
-    print(bottom, bottom + n_top_rows)
-    for i in range(bottom, bottom + n_top_rows):
-        for j in range(1, 8):
-            terrain_hash = terrain_hash | (terrain[i, j] << (i * 7 + j))
-    return terrain_hash << 4 | rock_type
+def hash(terrain, max_y, rock_type):
+    terrain_hash = terrain[max_y - MEMORISE_LAST_N:max_y + 1, 1:8].tobytes()
+    return terrain_hash + bytes([rock_type])
 
-def check_memory(terrain, max_y, n_top_rows, rock_type, rocks_fallen):
-    if max_y < n_top_rows:
+def check_memory(memory, terrain, rock_type, max_y, rocks_fallen):
+    if max_y < MEMORISE_LAST_N:
         return None
-    global memory
-    terrain_hash = hash(terrain, max_y, n_top_rows, rock_type)
+    terrain_hash = hash(terrain, max_y, rock_type)
     if terrain_hash in memory:
         return memory[terrain_hash]
     memory[terrain_hash] = (max_y, rocks_fallen)
     return None
 
+def repeats_until(until, y, rocks_fallen, y_change, rocks_per_change):
+    total_y = y + int((until - rocks_fallen) // rocks_per_change) * (y_change)
+    remaining_rocks = (until - rocks_fallen) % rocks_per_change
+    return total_y, remaining_rocks
+
 def simulate(terrain):
+    use_memory = True
+    memory = {}
+
     max_y = 0
+    loop_y = 0
     rocks_fallen = 0
-    unique = True
-    while unique:
+    while True:
         rocks_fallen += 1
         rock_type = next(rocks)
         rock = rock_types[rock_type]
@@ -93,37 +102,43 @@ def simulate(terrain):
             if is_stopped(terrain, rock, position):
                 position[0] += 1
                 max_y = max(max_y, set_rock(terrain, rock, position))
-
-                memo_result = check_memory(terrain, max_y, use_last_n_rows, rock_type, rocks_fallen)
-                if memo_result is not None:
-                    unique = False
-                    prev_y, prev_rocks_fallen = memo_result
-                    y_change = max_y - prev_y
-                    rocks_per_change = rocks_fallen - prev_rocks_fallen
                 break
-    return max_y, rocks_fallen, y_change, rocks_per_change
+        
+        if use_memory:
+            # try to find a loop
+            m = check_memory(memory, terrain, rock_type, max_y, rocks_fallen)
+            if m is not None:
+                prev_max_y, prev_rocks_fallen = m
+                y_change = max_y - prev_max_y
+                rocks_per_change = rocks_fallen - prev_rocks_fallen
+                
+                p1_y, p1_remaining = repeats_until(PART_1, max_y, rocks_fallen, y_change, rocks_per_change)
+                p2_y, p2_remaining = repeats_until(PART_2, max_y, rocks_fallen, y_change, rocks_per_change)
+                loop_y = max_y
+                use_memory = False
+        
+        if not use_memory:
+            # continue simulation until all remaning rocks fall
+            if p1_remaining == 0:
+                p1_y += (max_y - loop_y)
+            if p2_remaining == 0:
+                p2_y += (max_y - loop_y)
+            if p1_remaining <= 0 and p2_remaining <= 0:
+                return p1_y, p2_y
+            p1_remaining -= 1
+            p2_remaining -= 1
+            
 # rocks and move continious generator
 rocks = rock_gen()
 moves = move_gen()
 
 # terrain setup
-terrain = np.zeros((4000, 9), dtype=bool)
+terrain = np.zeros((TERRAIN_SPACE, 9), dtype=bool)
 terrain[:, 0] = True
 terrain[:, -1] = True
 terrain[0, :] = True
  
-# memorisation based on last n rows of terrain
-memory = {}
-use_last_n_rows = 1000
-
-
-max_y, rocks_fallen, y_change, rocks_per_change = simulate(terrain)
-print("max_y:", max_y, "rocks_fallen:", rocks_fallen, "y_change:", y_change, "rocks_per_change:", rocks_per_change)
-
-# after 2022
-height_2022 = max_y + int((2022 - rocks_fallen) // rocks_per_change) * y_change
-print("Part 1:", height_2022, "remaining rocks:", (2022 - rocks_fallen) % rocks_per_change)
-
-# after 1000000000000
-height_1000000000000 = max_y + int((1000000000000 - rocks_fallen) // rocks_per_change) * y_change
-print("Part 2:", height_1000000000000, "remaining rocks:", (1000000000000 - rocks_fallen) % rocks_per_change)
+# simulation
+p1, p2 = simulate(terrain)
+print("Part 1:", p1)
+print("Part 2:", p2)
